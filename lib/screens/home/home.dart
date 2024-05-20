@@ -1,5 +1,9 @@
-import 'package:queyndz/services/auth.dart';
 import 'package:flutter/material.dart';
+import 'package:queyndz/screens/home/product_screen.dart';
+import 'package:queyndz/screens/home/admin_screen.dart';
+import 'package:queyndz/screens/home/profile.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -7,8 +11,44 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final AuthService _auth = AuthService();
   int _selectedIndex = 0;
+  bool _isAdmin = false;
+
+  final List<String> _appBarTitles = [
+    'Trang chủ',
+    'Trang cá nhân',
+  ];
+
+  List<Widget> _widgetOptions = <Widget>[
+    ProductScreen(),
+    Profile(),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfUserIsAdmin();
+  }
+
+  Future<void> _checkIfUserIsAdmin() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final Map<String, dynamic>? userData =
+          userDoc.data() as Map<String, dynamic>?;
+      final isAdmin = userData?['isAdmin'] == 1;
+      if (isAdmin) {
+        setState(() {
+          _isAdmin = true;
+          _appBarTitles.insert(1, 'Quản trị');
+          _widgetOptions.insert(1, AdminScreen());
+        });
+      }
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -18,50 +58,28 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final SignOut = Material(
-      elevation: 5.0,
-      borderRadius: BorderRadius.circular(30.0),
-      color: Theme.of(context).primaryColor,
-      child: MaterialButton(
-        minWidth: MediaQuery.of(context).size.width,
-        padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
-        onPressed: () async {
-          await _auth.signOut();
-        },
-        child: Text(
-          "Log out",
-          style: TextStyle(color: Theme.of(context).primaryColorLight),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-
-    List<Widget> _widgetOptions = <Widget>[
-      Text('Home Page'),
-      Text('Register'),
-      Center(child: SignOut)
-    ];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bán sách pro'),
+        title: Text(_appBarTitles[_selectedIndex]),
         backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Trang chủ',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.business),
-            label: 'Register',
-          ),
+          if (_isAdmin)
+            BottomNavigationBarItem(
+              icon: Icon(Icons.business),
+              label: 'Quản trị',
+            ),
           BottomNavigationBarItem(
             icon: Icon(Icons.school),
-            label: 'Profile',
+            label: 'Trang cá nhân',
           ),
         ],
         currentIndex: _selectedIndex,

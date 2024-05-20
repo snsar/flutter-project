@@ -6,7 +6,8 @@ import '../models/registeruser.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance; // Define _firestore here
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance; // Define _firestore here
 
   FirebaseUser? _firebaseUser(User? user) {
     return user != null ? FirebaseUser(uid: user.uid) : null;
@@ -46,10 +47,12 @@ class AuthService {
               email: _register.email.toString(),
               password: _register.password.toString());
       User? user = userCredential.user;
+      int isAdminValue = (_register.email == 'admin@gmail.com') ? 1 : 0;
       await addUserInfoToFirestore(
         uid: user!.uid,
         name: _register.name!,
         gender: _register.gender!,
+        isAdmin: isAdminValue,
       );
       return _firebaseUser(user);
     } on FirebaseAuthException catch (e) {
@@ -71,12 +74,13 @@ class AuthService {
     required String uid,
     required String name,
     required int gender,
+    required int isAdmin,
   }) async {
     try {
-      await _firestore.collection('users').doc(uid).set({
-        'name': name,
-        'gender': gender,
-      });
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .set({'name': name, 'gender': gender, 'isAdmin': isAdmin});
       print("User Info Added");
     } catch (error) {
       print("Failed to add user info: $error");
